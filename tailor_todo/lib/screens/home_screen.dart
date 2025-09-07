@@ -3,7 +3,10 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/todo.dart';
 import '../utils/colors.dart';
 import '../utils/fonts.dart';
-import '../widgets/custom_button.dart';
+import '../widgets/home_header_bar.dart';
+import '../widgets/todo_list_tile.dart';
+import '../widgets/archive_bottom_bar.dart';
+import '../widgets/confirmation_dialog.dart';
 import 'add_task_screen.dart';
 import 'todo_details_screen.dart';
 import 'profile_screen.dart';
@@ -41,9 +44,14 @@ class _HomeScreenState extends State<HomeScreen> {
       });
     } catch (e) {
       setState(() => loading = false);
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Error loading todos: $e')));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error loading todos: $e'),
+            backgroundColor: AppColors.brandRed,
+          ),
+        );
+      }
     }
   }
 
@@ -51,10 +59,23 @@ class _HomeScreenState extends State<HomeScreen> {
     try {
       await supabase.from('todos').delete().eq('id', id);
       _loadTodos();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Task deleted successfully'),
+            backgroundColor: AppColors.accent,
+          ),
+        );
+      }
     } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Error deleting todo: $e')));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error deleting todo: $e'),
+            backgroundColor: AppColors.brandRed,
+          ),
+        );
+      }
     }
   }
 
@@ -62,156 +83,132 @@ class _HomeScreenState extends State<HomeScreen> {
     try {
       await supabase
           .from('todos')
-          .update({'archived': !showArchived})
+          .update({
+            'archived': !showArchived,
+            'updated_at': DateTime.now().toIso8601String(),
+          })
           .eq('id', id);
       _loadTodos();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(showArchived ? 'Task unarchived' : 'Task archived'),
+            backgroundColor: AppColors.accent,
+          ),
+        );
+      }
     } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Error archiving todo: $e')));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error updating todo: $e'),
+            backgroundColor: AppColors.brandRed,
+          ),
+        );
+      }
     }
+  }
+
+  void _showDeleteDialog(String todoId) {
+    showDialog(
+      context: context,
+      builder: (context) =>
+          DeleteConfirmationDialog(onConfirm: () => _deleteTodo(todoId)),
+    );
+  }
+
+  void _toggleArchiveView() {
+    setState(() {
+      showArchived = !showArchived;
+      loading = true;
+    });
+    _loadTodos();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.primary,
-      appBar: AppBar(
-        backgroundColor: AppColors.surface,
-        title: Text(
-          'Tailor Todo',
-          style: AppFonts.spectral(
-            color: AppColors.brandText,
-            size: 24,
-            weight: FontWeight.w300,
-          ),
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.person, color: AppColors.brandText),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const ProfileScreen()),
-              );
-            },
-          ),
-        ],
-      ),
-      body: Column(
-        children: [
-          // Archive toggle
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              children: [
-                Text(
-                  'Archived',
-                  style: AppFonts.spectral(
-                    color: AppColors.brandText,
-                    size: 18,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Switch(
-                  value: showArchived,
-                  onChanged: (value) {
-                    setState(() {
-                      showArchived = value;
-                      loading = true;
-                    });
-                    _loadTodos();
-                  },
-                  activeColor: AppColors.accent,
-                ),
-              ],
+      body: SafeArea(
+        child: Column(
+          children: [
+            // Header with title and profile
+            HomeHeaderBar(
+              onProfileTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const ProfileScreen()),
+                );
+              },
             ),
-          ),
-          // Todos list
-          Expanded(
-            child: loading
-                ? const Center(child: CircularProgressIndicator())
-                : todos.isEmpty
-                ? Center(
-                    child: Text(
-                      showArchived ? 'No archived todos' : 'No todos yet',
-                      style: AppFonts.cardo(
-                        color: AppColors.brandText,
-                        size: 16,
-                      ),
-                    ),
-                  )
-                : ListView.builder(
-                    padding: const EdgeInsets.all(16),
-                    itemCount: todos.length,
-                    itemBuilder: (context, index) {
-                      final todo = todos[index];
-                      return Container(
-                        margin: const EdgeInsets.only(bottom: 16),
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: AppColors.surface,
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color: AppColors.accent,
-                            width: 1.5,
+
+            // Todos list
+            Expanded(
+              child: loading
+                  ? Center(
+                      child: CircularProgressIndicator(color: AppColors.accent),
+                    )
+                  : todos.isEmpty
+                  ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            showArchived ? Icons.archive : Icons.task_alt,
+                            size: 64,
+                            color: AppColors.brandText.withOpacity(0.5),
                           ),
-                        ),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: GestureDetector(
-                                onTap: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (_) =>
-                                          TodoDetailsScreen(todo: todo),
-                                    ),
-                                  ).then((_) => _loadTodos());
-                                },
-                                child: Text(
-                                  todo.title,
-                                  style: AppFonts.cardo(
-                                    color: AppColors.onDark,
-                                    size: 16,
-                                    weight: FontWeight.w500,
-                                  ),
-                                ),
-                              ),
+                          const SizedBox(height: 16),
+                          Text(
+                            showArchived ? 'No archived todos' : 'No todos yet',
+                            style: AppFonts.cardo(
+                              color: AppColors.brandText,
+                              size: 16,
                             ),
-                            PopupMenuButton<String>(
-                              icon: const Icon(
-                                Icons.more_vert,
-                                color: AppColors.onDark,
+                          ),
+                          if (!showArchived) ...[
+                            const SizedBox(height: 8),
+                            Text(
+                              'Tap + to create your first todo',
+                              style: AppFonts.cardo(
+                                color: AppColors.brandText.withOpacity(0.7),
+                                size: 14,
                               ),
-                              onSelected: (value) {
-                                if (value == 'delete') {
-                                  _showDeleteDialog(todo.id);
-                                } else if (value == 'archive') {
-                                  _archiveTodo(todo.id);
-                                }
-                              },
-                              itemBuilder: (context) => [
-                                PopupMenuItem(
-                                  value: 'archive',
-                                  child: Text(
-                                    showArchived ? 'Unarchive' : 'Archive',
-                                  ),
-                                ),
-                                const PopupMenuItem(
-                                  value: 'delete',
-                                  child: Text('Delete'),
-                                ),
-                              ],
                             ),
                           ],
-                        ),
-                      );
-                    },
-                  ),
-          ),
-        ],
+                        ],
+                      ),
+                    )
+                  : ListView.builder(
+                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                      itemCount: todos.length,
+                      itemBuilder: (context, index) {
+                        final todo = todos[index];
+                        return TodoListTile(
+                          todo: todo,
+                          showArchived: showArchived,
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => TodoDetailsScreen(todo: todo),
+                              ),
+                            ).then((_) => _loadTodos());
+                          },
+                          onDelete: () => _showDeleteDialog(todo.id),
+                          onArchive: () => _archiveTodo(todo.id),
+                        );
+                      },
+                    ),
+            ),
+
+            // Archive bottom bar
+            ArchiveBottomBar(
+              isArchived: showArchived,
+              onTap: _toggleArchiveView,
+            ),
+          ],
+        ),
       ),
       floatingActionButton: showArchived
           ? null
@@ -223,43 +220,9 @@ class _HomeScreenState extends State<HomeScreen> {
                 ).then((_) => _loadTodos());
               },
               backgroundColor: AppColors.surface,
-              child: const Icon(Icons.add, color: AppColors.accent),
+              elevation: 8,
+              child: Icon(Icons.add, color: AppColors.accent, size: 28),
             ),
-    );
-  }
-
-  void _showDeleteDialog(String id) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: AppColors.surface,
-        title: Text(
-          'Really want to delete this task?',
-          style: AppFonts.cardo(color: AppColors.brandText, size: 16),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(
-              'Return',
-              style: AppFonts.cardo(color: AppColors.onDark),
-            ),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              _deleteTodo(id);
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.brandRed,
-            ),
-            child: Text(
-              'Delete',
-              style: AppFonts.cardo(color: AppColors.onDark),
-            ),
-          ),
-        ],
-      ),
     );
   }
 }
