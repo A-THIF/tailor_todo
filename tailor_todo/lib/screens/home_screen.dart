@@ -4,12 +4,13 @@ import '../models/todo.dart';
 import '../utils/colors.dart';
 import '../utils/fonts.dart';
 import '../widgets/header_bar.dart';
-import '../widgets/todo_list_tile.dart';
+import '../widgets/home_list_tile.dart';
 import '../widgets/archive_bottom_bar.dart';
 import '../widgets/confirmation_dialog.dart';
 import 'add_task_screen.dart';
 import 'todo_details_screen.dart';
 import 'profile_screen.dart';
+import '../widgets/profile_button.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -112,8 +113,10 @@ class _HomeScreenState extends State<HomeScreen> {
   void _showDeleteDialog(String todoId) {
     showDialog(
       context: context,
-      builder: (context) =>
-          DeleteConfirmationDialog(onConfirm: () => _deleteTodo(todoId)),
+      builder: (context) => ConfirmationDialog(
+        title: 'Delete Task',
+        onConfirm: () => _deleteTodo(todoId),
+      ),
     );
   }
 
@@ -140,19 +143,24 @@ class _HomeScreenState extends State<HomeScreen> {
               children: [
                 // Add padding to lower the header
                 Padding(
-                  padding: const EdgeInsets.only(top: 24.0), // adjust as needed
-                  child: HeaderBar(
-                    title: 'Tailor Apps', // updated title
-                    onProfileTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const ProfileScreen(),
-                        ),
-                      );
-                    },
+                  padding: const EdgeInsets.only(top: 24.0),
+                  child: Row(
+                    children: [
+                      Expanded(child: HeaderBar(title: 'Tailor Apps')),
+                      ProfileButton(
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const ProfileScreen(),
+                            ),
+                          );
+                        },
+                      ),
+                    ],
                   ),
                 ),
+
                 Expanded(
                   child: loading
                       ? Center(

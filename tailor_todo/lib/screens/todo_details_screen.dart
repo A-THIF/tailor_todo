@@ -8,6 +8,8 @@ import '../utils/colors.dart';
 import '../utils/fonts.dart';
 import '../widgets/custom_button.dart';
 import '../widgets/custom_text_field.dart';
+import '../widgets/todo_details_action.dart';
+import '../widgets/confirmation_dialog.dart';
 
 class TodoDetailsScreen extends StatefulWidget {
   final Todo todo;
@@ -89,7 +91,6 @@ class _TodoDetailsScreenState extends State<TodoDetailsScreen> {
         const SnackBar(content: Text('Todo updated successfully')),
       );
 
-      // Notify parent screen to reload todo list
       if (mounted) Navigator.of(context).pop(true);
     } catch (e) {
       ScaffoldMessenger.of(
@@ -107,7 +108,7 @@ class _TodoDetailsScreenState extends State<TodoDetailsScreen> {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(const SnackBar(content: Text('Todo deleted')));
-        Navigator.of(context).pop(true); // Signal parent to refresh
+        Navigator.of(context).pop(true);
       }
     } catch (e) {
       ScaffoldMessenger.of(
@@ -126,33 +127,9 @@ class _TodoDetailsScreenState extends State<TodoDetailsScreen> {
   void _showDeleteDialog() {
     showDialog(
       context: context,
-      builder: (_) => AlertDialog(
-        backgroundColor: AppColors.surface,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-          side: BorderSide(color: AppColors.accent, width: 1.5),
-        ),
-        title: Text(
-          'Really want to delete this task?',
-          style: TextStyle(color: AppColors.brandText),
-          textAlign: TextAlign.center,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: Text('Cancel', style: TextStyle(color: AppColors.brandText)),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.brandRed,
-            ),
-            onPressed: () {
-              Navigator.of(context).pop();
-              _deleteTodo();
-            },
-            child: Text('Delete', style: TextStyle(color: Colors.white)),
-          ),
-        ],
+      builder: (_) => ConfirmationDialog(
+        title: 'Really want to delete this task?',
+        onConfirm: _deleteTodo,
       ),
     );
   }
@@ -163,6 +140,7 @@ class _TodoDetailsScreenState extends State<TodoDetailsScreen> {
       backgroundColor: AppColors.primary,
       appBar: AppBar(
         backgroundColor: AppColors.surface,
+        elevation: 4,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () => Navigator.of(context).pop(),
@@ -173,22 +151,13 @@ class _TodoDetailsScreenState extends State<TodoDetailsScreen> {
         ),
         actions: [
           if (!_isEditing)
-            PopupMenuButton<String>(
-              icon: Icon(Icons.more_vert, color: AppColors.brandText),
-              onSelected: (value) {
-                if (value == 'edit') {
-                  setState(() => _isEditing = true);
-                } else if (value == 'delete') {
-                  _showDeleteDialog();
-                }
-              },
-              itemBuilder: (_) => [
-                const PopupMenuItem(value: 'edit', child: Text('Edit')),
-                const PopupMenuItem(value: 'delete', child: Text('Delete')),
-              ],
+            TodoDetailsActions(
+              onEdit: () => setState(() => _isEditing = true),
+              onDelete: _showDeleteDialog,
             ),
         ],
       ),
+
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
         child: Column(
@@ -217,7 +186,7 @@ class _TodoDetailsScreenState extends State<TodoDetailsScreen> {
                     )
                   : Text(
                       widget.todo.title,
-                      style: TextStyle(
+                      style: const TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.w600,
                         color: Colors.white,
@@ -242,7 +211,7 @@ class _TodoDetailsScreenState extends State<TodoDetailsScreen> {
                         hintText: 'Description',
                         hintStyle: TextStyle(color: AppColors.brandText),
                       ),
-                      style: TextStyle(color: Colors.white),
+                      style: const TextStyle(color: Colors.white),
                     )
                   : Text(
                       widget.todo.description.isNotEmpty
@@ -269,7 +238,7 @@ class _TodoDetailsScreenState extends State<TodoDetailsScreen> {
                   const SizedBox(height: 12),
                   Text(
                     _formatDuration(_remaining),
-                    style: TextStyle(
+                    style: const TextStyle(
                       fontSize: 28,
                       color: Colors.white,
                       fontWeight: FontWeight.bold,

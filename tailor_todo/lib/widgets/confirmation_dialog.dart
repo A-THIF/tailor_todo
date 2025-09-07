@@ -1,12 +1,16 @@
 import 'package:flutter/material.dart';
 import '../utils/colors.dart';
 import '../utils/fonts.dart';
-import 'custom_button.dart';
 
-class DeleteConfirmationDialog extends StatelessWidget {
+class ConfirmationDialog extends StatelessWidget {
+  final String title;
   final VoidCallback onConfirm;
 
-  const DeleteConfirmationDialog({super.key, required this.onConfirm});
+  const ConfirmationDialog({
+    super.key,
+    required this.title,
+    required this.onConfirm,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -16,58 +20,22 @@ class DeleteConfirmationDialog extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         side: BorderSide(color: AppColors.accent, width: 1.5),
       ),
-      contentPadding: const EdgeInsets.all(24),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            'Really want to delete this task?',
-            style: AppFonts.cardo(
-              color: AppColors.brandText,
-              size: 16,
-              weight: FontWeight.w500,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 24),
-          Row(
-            children: [
-              Expanded(
-                child: CustomButton(
-                  label: 'Return',
-                  onPressed: () => Navigator.pop(context),
-                  backgroundColor: AppColors.surface,
-                  foregroundColor: AppColors.onDark,
-                  height: 44,
-                  textStyle: AppFonts.cardo(
-                    color: AppColors.onDark,
-                    size: 14,
-                    weight: FontWeight.w500,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: CustomButton(
-                  label: 'Delete',
-                  onPressed: () {
-                    Navigator.pop(context);
-                    onConfirm();
-                  },
-                  backgroundColor: AppColors.brandRed,
-                  foregroundColor: AppColors.onDark,
-                  height: 44,
-                  textStyle: AppFonts.cardo(
-                    color: AppColors.onDark,
-                    size: 14,
-                    weight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
+      content: Text(
+        title,
+        style: TextStyle(color: AppColors.brandText),
+        textAlign: TextAlign.center,
       ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text('Cancel', style: TextStyle(color: AppColors.brandText)),
+        ),
+        ElevatedButton(
+          style: ElevatedButton.styleFrom(backgroundColor: AppColors.brandRed),
+          onPressed: onConfirm,
+          child: const Text('Delete', style: TextStyle(color: Colors.white)),
+        ),
+      ],
     );
   }
 }
