@@ -246,7 +246,10 @@ class _HomeScreenState extends State<HomeScreen> {
       floatingActionButton: showArchived
           ? null
           : Padding(
-              padding: const EdgeInsets.only(bottom: fabBottomGap, right: 8),
+              padding: const EdgeInsets.only(
+                bottom: 64.0,
+                right: 14.0,
+              ), // adjust to lift fab above bottom bar
               child: FloatingActionButton(
                 onPressed: () {
                   Navigator.push(
@@ -254,9 +257,11 @@ class _HomeScreenState extends State<HomeScreen> {
                     MaterialPageRoute(builder: (_) => const AddTaskScreen()),
                   ).then((_) => _loadTodos());
                 },
-                backgroundColor: AppColors.surface,
+                backgroundColor: AppColors
+                    .surface, // use your color, e.g., AppColors.surface
+                shape: const CircleBorder(), // ensures perfect circle
                 elevation: 8,
-                child: Icon(Icons.add, color: AppColors.accent, size: 28),
+                child: Icon(Icons.add, color: AppColors.brandText, size: 28),
               ),
             ),
     );
