@@ -127,101 +127,122 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // height + padding for the bottom bar (adjust if you change bar height)
+    const double archiveBarHeight = 64;
+    const double fabBottomGap = 84;
+
     return Scaffold(
       backgroundColor: AppColors.primary,
       body: SafeArea(
-        child: Column(
+        child: Stack(
           children: [
-            // Header with title and profile
-            HomeHeaderBar(
-              onProfileTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const ProfileScreen()),
-                );
-              },
-            ),
-
-            // Todos list
-            Expanded(
-              child: loading
-                  ? Center(
-                      child: CircularProgressIndicator(color: AppColors.accent),
-                    )
-                  : todos.isEmpty
-                  ? Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            showArchived ? Icons.archive : Icons.task_alt,
-                            size: 64,
-                            color: AppColors.brandText.withOpacity(0.5),
+            Column(
+              children: [
+                HomeHeaderBar(
+                  onProfileTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const ProfileScreen()),
+                    );
+                  },
+                ),
+                Expanded(
+                  child: loading
+                      ? Center(
+                          child: CircularProgressIndicator(
+                            color: AppColors.accent,
                           ),
-                          const SizedBox(height: 16),
-                          Text(
-                            showArchived ? 'No archived todos' : 'No todos yet',
-                            style: AppFonts.cardo(
-                              color: AppColors.brandText,
-                              size: 16,
-                            ),
+                        )
+                      : todos.isEmpty
+                      ? Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                showArchived ? Icons.archive : Icons.task_alt,
+                                size: 64,
+                                color: AppColors.brandText.withOpacity(0.5),
+                              ),
+                              const SizedBox(height: 16),
+                              Text(
+                                showArchived
+                                    ? 'No archived todos'
+                                    : 'No todos yet',
+                                style: AppFonts.cardo(
+                                  color: AppColors.brandText,
+                                  size: 16,
+                                ),
+                              ),
+                              if (!showArchived) ...[
+                                const SizedBox(height: 8),
+                                Text(
+                                  'Tap + to create your first todo',
+                                  style: AppFonts.cardo(
+                                    color: AppColors.brandText.withOpacity(0.7),
+                                    size: 14,
+                                  ),
+                                ),
+                              ],
+                            ],
                           ),
-                          if (!showArchived) ...[
-                            const SizedBox(height: 8),
-                            Text(
-                              'Tap + to create your first todo',
-                              style: AppFonts.cardo(
-                                color: AppColors.brandText.withOpacity(0.7),
-                                size: 14,
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
-                    )
-                  : ListView.builder(
-                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-                      itemCount: todos.length,
-                      itemBuilder: (context, index) {
-                        final todo = todos[index];
-                        return TodoListTile(
-                          todo: todo,
-                          showArchived: showArchived,
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => TodoDetailsScreen(todo: todo),
-                              ),
-                            ).then((_) => _loadTodos());
+                        )
+                      : ListView.builder(
+                          padding: const EdgeInsets.fromLTRB(
+                            16,
+                            8,
+                            16,
+                            archiveBarHeight + 16,
+                          ),
+                          itemCount: todos.length,
+                          itemBuilder: (context, index) {
+                            final todo = todos[index];
+                            return TodoListTile(
+                              todo: todo,
+                              showArchived: showArchived,
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) =>
+                                        TodoDetailsScreen(todo: todo),
+                                  ),
+                                ).then((_) => _loadTodos());
+                              },
+                              onDelete: () => _showDeleteDialog(todo.id),
+                              onArchive: () => _archiveTodo(todo.id),
+                            );
                           },
-                          onDelete: () => _showDeleteDialog(todo.id),
-                          onArchive: () => _archiveTodo(todo.id),
-                        );
-                      },
-                    ),
+                        ),
+                ),
+              ],
             ),
-
-            // Archive bottom bar
-            ArchiveBottomBar(
-              isArchived: showArchived,
-              onTap: _toggleArchiveView,
+            // Docked bottom bar
+            Align(
+              alignment: Alignment.bottomCenter,
+              child: ArchiveBottomBar(
+                isArchived: showArchived,
+                onTap: _toggleArchiveView,
+              ),
             ),
           ],
         ),
       ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.endDocked,
       floatingActionButton: showArchived
           ? null
-          : FloatingActionButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const AddTaskScreen()),
-                ).then((_) => _loadTodos());
-              },
-              backgroundColor: AppColors.surface,
-              elevation: 8,
-              child: Icon(Icons.add, color: AppColors.accent, size: 28),
+          : Padding(
+              padding: const EdgeInsets.only(bottom: fabBottomGap, right: 8),
+              child: FloatingActionButton(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const AddTaskScreen()),
+                  ).then((_) => _loadTodos());
+                },
+                backgroundColor: AppColors.surface,
+                elevation: 8,
+                child: Icon(Icons.add, color: AppColors.accent, size: 28),
+              ),
             ),
     );
   }

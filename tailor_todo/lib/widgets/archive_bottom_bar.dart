@@ -14,41 +14,46 @@ class ArchiveBottomBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.all(16),
-      child: Material(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(16),
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(16),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-            decoration: BoxDecoration(borderRadius: BorderRadius.circular(16)),
-            child: Row(
-              children: [
-                Text(
-                  'Archived',
-                  style: AppFonts.spectral(
-                    color: AppColors.brandText,
+    return SafeArea(
+      top: false,
+      child: Container(
+        alignment: Alignment.bottomCenter, // stick to bottom
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(16),
+            child: Container(
+              width: 200, // fixed smaller width
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              decoration: BoxDecoration(
+                color: AppColors.surface,
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(16),
+                  topRight: Radius.circular(16),
+                ),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    'Archived',
+                    style: AppFonts.spectral(
+                      color: const Color(0xFFF1AA9B),
+                      size: 16,
+                      weight: FontWeight.w300,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Icon(
+                    Icons.folder_rounded,
                     size: 18,
-                    weight: FontWeight.w300,
+                    color: isArchived
+                        ? const Color(0xFFF1AA9B)
+                        : AppColors.onDark,
                   ),
-                ),
-                const Spacer(),
-                Container(
-                  width: 24,
-                  height: 24,
-                  decoration: BoxDecoration(
-                    color: isArchived ? AppColors.accent : Colors.transparent,
-                    border: Border.all(color: AppColors.accent, width: 2),
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: isArchived
-                      ? Icon(Icons.check, color: AppColors.surface, size: 16)
-                      : null,
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
