@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+
 import '../models/todo.dart';
 import '../utils/colors.dart';
 import '../utils/fonts.dart';
@@ -17,77 +20,141 @@ class TodoDetailsScreen extends StatefulWidget {
 
 class _TodoDetailsScreenState extends State<TodoDetailsScreen> {
   final supabase = Supabase.instance.client;
-  late TextEditingController titleController;
-  late TextEditingController descriptionController;
-  bool isEditing = false;
-  bool loading = false;
+
+  late TextEditingController _titleController;
+  late TextEditingController _descriptionController;
+
+  bool _isEditing = false;
+  bool _loading = false;
+
+  Timer? _timer;
+  Duration _remaining = Duration.zero;
 
   @override
   void initState() {
     super.initState();
-    titleController = TextEditingController(text: widget.todo.title);
-    descriptionController = TextEditingController(
+    _titleController = TextEditingController(text: widget.todo.title);
+    _descriptionController = TextEditingController(
       text: widget.todo.description,
     );
+    _startTimer();
+  }
+
+  void _startTimer() {
+    _updateRemaining();
+    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (!mounted) return;
+      _updateRemaining();
+    });
+  }
+
+  void _updateRemaining() {
+    final now = DateTime.now().toUtc();
+    final diff = widget.todo.deadline.difference(now);
+    setState(() {
+      _remaining = diff.isNegative ? Duration.zero : diff;
+    });
   }
 
   @override
   void dispose() {
-    titleController.dispose();
-    descriptionController.dispose();
+    _timer?.cancel();
+    _titleController.dispose();
+    _descriptionController.dispose();
     super.dispose();
   }
 
   Future<void> _updateTodo() async {
-    setState(() => loading = true);
+    if (_titleController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Title cannot be empty')));
+      return;
+    }
+
+    setState(() => _loading = true);
 
     try {
       await supabase
           .from('todos')
           .update({
-            'title': titleController.text.trim(),
-            'description': descriptionController.text.trim(),
-            'updated_at': DateTime.now().toIso8601String(),
+            'title': _titleController.text.trim(),
+            'description': _descriptionController.text.trim(),
+            'updated_at': DateTime.now().toUtc().toIso8601String(),
           })
           .eq('id', widget.todo.id);
 
-      setState(() => isEditing = false);
+      setState(() => _isEditing = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Task updated successfully')),
+        const SnackBar(content: Text('Todo updated successfully')),
       );
+
+      // Notify parent screen to reload todo list
+      if (mounted) Navigator.of(context).pop(true);
     } catch (e) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text('Error updating task: $e')));
-    } finally {
-      setState(() => loading = false);
+      ).showSnackBar(SnackBar(content: Text('Update failed: $e')));
     }
+
+    setState(() => _loading = false);
   }
 
   Future<void> _deleteTodo() async {
     try {
       await supabase.from('todos').delete().eq('id', widget.todo.id);
-      Navigator.pop(context);
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Todo deleted')));
+        Navigator.of(context).pop(true); // Signal parent to refresh
+      }
     } catch (e) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text('Error deleting task: $e')));
+      ).showSnackBar(SnackBar(content: Text('Delete failed: $e')));
     }
   }
 
-  String _formatDuration() {
-    final now = DateTime.now();
-    final difference = widget.todo.deadline.difference(now);
+  String _formatDuration(Duration duration) {
+    final h = duration.inHours.toString().padLeft(2, '0');
+    final m = (duration.inMinutes % 60).toString().padLeft(2, '0');
+    final s = (duration.inSeconds % 60).toString().padLeft(2, '0');
+    return '$h : $m : $s';
+  }
 
-    if (difference.isNegative) {
-      return 'Expired';
-    }
-
-    final hours = difference.inHours;
-    final minutes = difference.inMinutes % 60;
-    final seconds = difference.inSeconds % 60;
-
-    return '${hours.toString().padLeft(2, '0')}:${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
+  void _showDeleteDialog() {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        backgroundColor: AppColors.surface,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: BorderSide(color: AppColors.accent, width: 1.5),
+        ),
+        title: Text(
+          'Really want to delete this task?',
+          style: TextStyle(color: AppColors.brandText),
+          textAlign: TextAlign.center,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text('Cancel', style: TextStyle(color: AppColors.brandText)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.brandRed,
+            ),
+            onPressed: () {
+              Navigator.of(context).pop();
+              _deleteTodo();
+            },
+            child: Text('Delete', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -97,29 +164,25 @@ class _TodoDetailsScreenState extends State<TodoDetailsScreen> {
       appBar: AppBar(
         backgroundColor: AppColors.surface,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: AppColors.brandText),
-          onPressed: () => Navigator.pop(context),
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () => Navigator.of(context).pop(),
         ),
         title: Text(
-          isEditing ? 'Edit Task' : 'Task Details',
-          style: AppFonts.spectral(
-            color: AppColors.brandText,
-            size: 20,
-            weight: FontWeight.w300,
-          ),
+          _isEditing ? 'Edit Task' : 'Task Details',
+          style: TextStyle(color: AppColors.brandText),
         ),
         actions: [
-          if (!isEditing)
+          if (!_isEditing)
             PopupMenuButton<String>(
-              icon: const Icon(Icons.more_vert, color: AppColors.brandText),
+              icon: Icon(Icons.more_vert, color: AppColors.brandText),
               onSelected: (value) {
                 if (value == 'edit') {
-                  setState(() => isEditing = true);
+                  setState(() => _isEditing = true);
                 } else if (value == 'delete') {
                   _showDeleteDialog();
                 }
               },
-              itemBuilder: (context) => [
+              itemBuilder: (_) => [
                 const PopupMenuItem(value: 'edit', child: Text('Edit')),
                 const PopupMenuItem(value: 'delete', child: Text('Delete')),
               ],
@@ -131,28 +194,39 @@ class _TodoDetailsScreenState extends State<TodoDetailsScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Title Section
+            // Title
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
                 color: AppColors.surface,
                 borderRadius: BorderRadius.circular(16),
               ),
-              child: isEditing
-                  ? CustomTextField(controller: titleController, label: 'Title')
+              child: _isEditing
+                  ? TextField(
+                      controller: _titleController,
+                      decoration: InputDecoration(
+                        labelText: 'Title',
+                        labelStyle: TextStyle(color: AppColors.brandText),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        filled: true,
+                        fillColor: AppColors.primary,
+                      ),
+                      style: TextStyle(color: Colors.white),
+                    )
                   : Text(
                       widget.todo.title,
-                      style: AppFonts.cardo(
-                        color: AppColors.onDark,
-                        size: 20,
-                        weight: FontWeight.w600,
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
                       ),
                     ),
             ),
-
             const SizedBox(height: 20),
 
-            // Description Section
+            // Description
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
@@ -160,55 +234,26 @@ class _TodoDetailsScreenState extends State<TodoDetailsScreen> {
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(color: AppColors.accent, width: 1.5),
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Description',
-                    style: AppFonts.spectral(
-                      color: AppColors.brandText,
-                      size: 16,
+              child: _isEditing
+                  ? TextField(
+                      controller: _descriptionController,
+                      maxLines: null,
+                      decoration: InputDecoration.collapsed(
+                        hintText: 'Description',
+                        hintStyle: TextStyle(color: AppColors.brandText),
+                      ),
+                      style: TextStyle(color: Colors.white),
+                    )
+                  : Text(
+                      widget.todo.description.isNotEmpty
+                          ? widget.todo.description
+                          : 'No description',
+                      style: TextStyle(color: AppColors.brandText),
                     ),
-                  ),
-                  const SizedBox(height: 12),
-                  isEditing
-                      ? Container(
-                          height: 120,
-                          child: TextField(
-                            controller: descriptionController,
-                            maxLines: null,
-                            expands: true,
-                            textAlignVertical: TextAlignVertical.top,
-                            decoration: InputDecoration(
-                              hintText: 'Description...',
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                borderSide: const BorderSide(
-                                  color: AppColors.inputBorder,
-                                ),
-                              ),
-                            ),
-                            style: AppFonts.cardo(color: AppColors.onDark),
-                          ),
-                        )
-                      : Text(
-                          widget.todo.description.isEmpty
-                              ? 'No description'
-                              : widget.todo.description,
-                          style: AppFonts.cardo(
-                            color: widget.todo.description.isEmpty
-                                ? AppColors.onDark.withOpacity(0.6)
-                                : AppColors.onDark,
-                            size: 16,
-                          ),
-                        ),
-                ],
-              ),
             ),
-
             const SizedBox(height: 20),
 
-            // Timer Section
+            // Remaining Time
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
@@ -219,108 +264,42 @@ class _TodoDetailsScreenState extends State<TodoDetailsScreen> {
                 children: [
                   Text(
                     'Time Remaining',
-                    style: AppFonts.spectral(
-                      color: AppColors.brandText,
-                      size: 16,
-                    ),
+                    style: TextStyle(color: AppColors.brandText, fontSize: 16),
                   ),
                   const SizedBox(height: 12),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 24,
-                      vertical: 16,
-                    ),
-                    decoration: BoxDecoration(
-                      color: AppColors.primary,
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Text(
-                      _formatDuration(),
-                      style: AppFonts.cardo(
-                        color: AppColors.onDark,
-                        size: 24,
-                        weight: FontWeight.bold,
-                      ),
+                  Text(
+                    _formatDuration(_remaining),
+                    style: TextStyle(
+                      fontSize: 28,
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 2,
                     ),
                   ),
                 ],
               ),
             ),
-
             const SizedBox(height: 32),
 
-            // Action Buttons
-            if (isEditing) ...[
+            // Buttons for save/cancel in edit mode
+            if (_isEditing) ...[
               CustomButton(
                 label: 'Save Changes',
                 onPressed: _updateTodo,
-                loading: loading,
-                backgroundColor: AppColors.accent,
-                foregroundColor: AppColors.surface,
-                height: 50,
-                textStyle: AppFonts.cardo(
-                  color: AppColors.surface,
-                  size: 16,
-                  weight: FontWeight.w600,
-                ),
+                loading: _loading,
+                height: 48,
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 12),
               CustomButton(
                 label: 'Cancel',
-                onPressed: () => setState(() => isEditing = false),
+                onPressed: () => setState(() => _isEditing = false),
                 backgroundColor: AppColors.surface,
-                foregroundColor: AppColors.onDark,
-                height: 50,
-                textStyle: AppFonts.cardo(
-                  color: AppColors.onDark,
-                  size: 16,
-                  weight: FontWeight.w500,
-                ),
+                foregroundColor: Colors.white,
+                height: 48,
               ),
             ],
           ],
         ),
-      ),
-    );
-  }
-
-  void _showDeleteDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: AppColors.surface,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-          side: const BorderSide(color: AppColors.accent, width: 1.5),
-        ),
-        title: Text(
-          'Really want to delete this task?',
-          style: AppFonts.cardo(color: AppColors.brandText, size: 16),
-        ),
-        actions: [
-          CustomButton(
-            label: 'Return',
-            onPressed: () => Navigator.pop(context),
-            backgroundColor: AppColors.surface,
-            foregroundColor: AppColors.onDark,
-            width: 100,
-            height: 40,
-            textStyle: AppFonts.cardo(color: AppColors.onDark, size: 14),
-          ),
-          const SizedBox(width: 8),
-          CustomButton(
-            label: 'Delete',
-            onPressed: () {
-              Navigator.pop(context);
-              _deleteTodo();
-            },
-            backgroundColor: AppColors.brandRed,
-            foregroundColor: AppColors.onDark,
-            width: 100,
-            height: 40,
-            textStyle: AppFonts.cardo(color: AppColors.onDark, size: 14),
-          ),
-        ],
       ),
     );
   }

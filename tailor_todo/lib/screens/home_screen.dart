@@ -3,7 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/todo.dart';
 import '../utils/colors.dart';
 import '../utils/fonts.dart';
-import '../widgets/home_header_bar.dart';
+import '../widgets/header_bar.dart';
 import '../widgets/todo_list_tile.dart';
 import '../widgets/archive_bottom_bar.dart';
 import '../widgets/confirmation_dialog.dart';
@@ -138,13 +138,20 @@ class _HomeScreenState extends State<HomeScreen> {
           children: [
             Column(
               children: [
-                HomeHeaderBar(
-                  onProfileTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const ProfileScreen()),
-                    );
-                  },
+                // Add padding to lower the header
+                Padding(
+                  padding: const EdgeInsets.only(top: 24.0), // adjust as needed
+                  child: HeaderBar(
+                    title: 'Tailor Apps', // updated title
+                    onProfileTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const ProfileScreen(),
+                        ),
+                      );
+                    },
+                  ),
                 ),
                 Expanded(
                   child: loading

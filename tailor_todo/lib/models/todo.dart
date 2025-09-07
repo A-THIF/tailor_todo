@@ -25,7 +25,7 @@ class Todo {
       userId: json['user_id'],
       title: json['title'],
       description: json['description'] ?? '',
-      deadline: DateTime.parse(json['deadline']),
+      deadline: DateTime.parse(json['deadline']).toUtc(),
       archived: json['archived'] ?? false,
       createdAt: DateTime.parse(json['created_at']),
       updatedAt: DateTime.parse(json['updated_at']),
