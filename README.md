@@ -1,19 +1,6 @@
-<<<<<<< HEAD
-# Tailor Todo - Flutter Todo Reminder App
-
-
-## Overview
-
-Tailor Todo is a simple yet powerful Todo Reminder app built with Flutter and Supabase. The app allows users to:
-- Sign in securely using **Google Authentication** via Supabase.
-- Manage personal todo lists with real-time **CRUD** functionality.
-- Receive **local notifications** for task reminders
-=======
 # Tailor Todo
 
 A powerful Flutter todo app using Supabase for backend, Firebase for messaging, and local notifications for real-time task reminders.
-
->>>>>>> fb565c1ddc9af998fc6a3cd020c096d92530a4f6
 ---
 
 ## Features
