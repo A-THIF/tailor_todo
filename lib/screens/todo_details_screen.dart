@@ -5,9 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../models/todo.dart';
 import '../utils/colors.dart';
-import '../utils/fonts.dart';
 import '../widgets/custom_button.dart';
-import '../widgets/custom_text_field.dart';
 import '../widgets/todo_details_action.dart';
 import '../widgets/confirmation_dialog.dart';
 

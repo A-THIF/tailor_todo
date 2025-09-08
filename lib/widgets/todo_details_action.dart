@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../utils/colors.dart';
-import '../utils/fonts.dart';
 
 class TodoDetailsActions extends StatelessWidget {
   final VoidCallback onEdit;

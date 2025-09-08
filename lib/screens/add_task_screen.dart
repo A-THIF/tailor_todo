@@ -4,10 +4,11 @@ import '../utils/colors.dart';
 import '../utils/fonts.dart';
 import '../widgets/custom_button.dart';
 import '../widgets/custom_text_field.dart';
-import '../widgets/header_bar.dart';
+import '../notifications/notification_service.dart'; // Import notification service
 
 class AddTaskScreen extends StatefulWidget {
   const AddTaskScreen({super.key});
+
   @override
   State<AddTaskScreen> createState() => _AddTaskScreenState();
 }
@@ -16,7 +17,6 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
   final supabase = Supabase.instance.client;
   final titleController = TextEditingController();
   final descriptionController = TextEditingController();
-
   int hours = 0;
   int minutes = 0;
   int seconds = 0;
@@ -38,13 +38,28 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
       );
       final deadline = DateTime.now().toUtc().add(duration);
 
-      await supabase.from('todos').insert({
-        'user_id': supabase.auth.currentUser!.id,
-        'title': titleController.text.trim(),
-        'description': descriptionController.text.trim(),
-        'deadline': deadline.toIso8601String(),
-        'archived': false,
-      });
+      // Insert new task and get inserted ID
+      final inserted = await supabase
+          .from('todos')
+          .insert({
+            'user_id': supabase.auth.currentUser!.id,
+            'title': titleController.text.trim(),
+            'description': descriptionController.text.trim(),
+            'deadline': deadline.toIso8601String(),
+            'archived': false,
+          })
+          .select('id')
+          .single();
+
+      // --- KEY ADDITION: Schedule local notification ---
+      final String todoId = inserted['id'].toString();
+
+      await NotificationService.instance.scheduleDeadline(
+        todoId: todoId,
+        title: titleController.text.trim(),
+        deadlineUtc: deadline,
+      );
+      // --- END KEY ADDITION ---
 
       if (mounted) Navigator.pop(context);
     } catch (e) {
@@ -63,13 +78,12 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            // Custom header with centered title and left back chevron
-            // Header Section for Add Task
+            // Header Section
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
               child: Row(
                 children: [
-                  // Circle Back Button
+                  // Back Button
                   GestureDetector(
                     onTap: () => Navigator.pop(context),
                     child: Container(
@@ -86,10 +100,8 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
                       ),
                     ),
                   ),
-
                   const SizedBox(width: 12),
-
-                  // Rounded Rectangle Title
+                  // Title
                   Expanded(
                     child: Container(
                       padding: const EdgeInsets.symmetric(
@@ -115,8 +127,7 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
                 ],
               ),
             ),
-
-            // Form content
+            // Form Content
             Expanded(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),

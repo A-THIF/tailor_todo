@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "630791373016",
+    "project_id": "tailor-todo-2f31c",
+    "storage_bucket": "tailor-todo-2f31c.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:630791373016:android:8eb08d37e2bc96aae5d7ad",
+        "android_client_info": {
+          "package_name": "com.example.tailor_todo"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA7d_7OcsvfqnSecpCw6TkBhkerTOr2L60"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
